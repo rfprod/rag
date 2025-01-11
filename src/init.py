@@ -21,6 +21,7 @@ text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
 )
 
 doc_splits = text_splitter.split_documents(docs_list)
+# https://python.langchain.com/docs/integrations/vectorstores/neo4jvector/
 vector_store = Neo4jVector.from_documents(
     documents=doc_splits,
     embedding=OllamaEmbeddings(

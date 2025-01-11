@@ -19,6 +19,7 @@ jobs:
     outputs:
       codeowners-change: ${{ steps.codeowners-change.outputs.change }}
       src-change: ${{ steps.src-change.outputs.change }}
+      requirements-change: ${{ steps.requirements-change.outputs.change }}
       shelltools-change: ${{ steps.shelltools-change.outputs.change }}
 
     steps:
@@ -39,6 +40,12 @@ jobs:
         uses: ./.github/actions/check-changes
         with:
           pattern: '^src'
+
+      - name: Requirements change
+        id: requirements-change
+        uses: ./.github/actions/check-changes
+        with:
+          pattern: '^requirements.txt'
 
       - name: Shell tools change
         id: shelltools-change
@@ -102,7 +109,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Setup environment
-        uses: ./.github/actions/check-changes
+        uses: ./.github/actions/setup-environment
         with:
           venv: ${{ matrix.venv }}
 
@@ -113,15 +120,17 @@ jobs:
           shellcheck tools/actions/**/*.sh
 
       - name: Lint source code
-        if: needs.checks.outputs.src-change == 'true'
+        if: ${{ needs.checks.outputs.src-change == 'true' || needs.checks.outputs.requirements-change == 'true'}}
         run: |
           source "$VENV/bin/activate"
           black ./src/ --check
           deactivate
+        env:
+          VENV: ${{ matrix.venv }}
 
       - name: Set failure
         id: check
-        if: ${{ failure() || cencelled() }}
+        if: ${{ failure() || cancelled() }}
         run: echo "success=$(echo 'false')" >> $GITHUB_OUTPUT
 
   premerge:
