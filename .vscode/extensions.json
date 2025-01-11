@@ -1,0 +1,13 @@
+{
+  "recommendations": [
+    "pkief.material-icon-theme",
+    "atishay-jain.all-autocomplete",
+    "sadesyllas.vscode-workspace-switcher",
+    "editorconfig.editorconfig",
+    "mikestead.dotenv",
+    "redhat.vscode-yaml",
+    "ms-python.python",
+    "foxundermoon.shell-format",
+    "timonwong.shellcheck",
+  ]
+}
