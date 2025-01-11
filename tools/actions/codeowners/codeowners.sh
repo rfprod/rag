@@ -44,3 +44,5 @@ done
 OUTPUT=${OUTPUT::-1}
 
 OUTPUT+="]"
+
+echo "$OUTPUT"

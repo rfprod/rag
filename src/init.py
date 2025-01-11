@@ -25,7 +25,7 @@ doc_splits = text_splitter.split_documents(docs_list)
 vector_store = Neo4jVector.from_documents(
     documents=doc_splits,
     embedding=OllamaEmbeddings(
-        base_url="http://localhost:11434", model="llama3.2:latest"
+        base_url="http://localhost:11434", model="gemma2:latest"
     ),
     url=os.getenv("NEO4J_URL"),
     username=os.getenv("NEO4J_USER"),
@@ -46,7 +46,7 @@ prompt = PromptTemplate(
 )
 
 llm = ChatOllama(
-    base_url="http://localhost:11434", model="llama3.2:latest", temperature=0
+    base_url="http://localhost:11434", model="gemma2:latest", temperature=0
 )
 
 rag_chain = prompt | llm | StrOutputParser()
