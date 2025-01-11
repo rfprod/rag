@@ -19,14 +19,14 @@ jobs:
     runs-on: ubuntu-latest
 
     outputs:
-      matrix: ${{ steps.codeowners.outputs.matrix }}
+      matrix: ${{ steps.get-codeowners.outputs.matrix }}
 
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
 
       - name: Get codeowners
-        id: codeowners
+        id: get-codeowners
         run: |
           RESULT=$(bash tools/actions/codeowners/codeowners.sh)
           echo "matrix=$RESULT" >> $GITHUB_OUTPUT
