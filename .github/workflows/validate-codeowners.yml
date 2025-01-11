@@ -1,0 +1,51 @@
+name: validate-codeowners
+
+on:
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+  workflow_call:
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: ${{ github.head_ref }}.${{ github.sha }}.validate-codeowners
+  cancel-in-progress: true
+
+jobs:
+  codeowners:
+    runs-on: ubuntu-latest
+
+    outputs:
+      matrix: ${{ steps.codeowners.outputs.matrix }}
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+
+      - name: Get codeowners
+        id: codeowners
+        run: |
+          RESULT=$(bash tools/shell/actions/codeowners/codeowners.sh)
+          echo "matrix=$RESULT" >> $GITHUB_OUTPUT
+          echo "$RESULT"
+
+  validate:
+    needs: codeowners
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        name: ${{ fromJSON(needs.codeowners.outputs.matrix) }}
+
+    steps:
+      - name: Validate codeowners
+        uses: octokit/request-action@v2.x
+        with:
+          route: GET /repos/{repository}/collaborators/{collaborator}
+          repository: ${{ github.repository }}
+          collaborator: ${{ matrix.name }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

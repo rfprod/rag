@@ -1,0 +1,31 @@
+name: check-changes
+description: Find changes matching a pattern using Git.
+
+inputs:
+  trunk:
+    description: The name of the trunk (default branch).
+    default: main
+  pattern:
+    description: A regular expression for giltering Git output.
+    default: '^.*'
+outputs:
+  change:
+    description: A string representation of a boolean value denoting presence or absence of changes matching the pattern.
+    value: ${{ steps.check-changes.outputs.change }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Check changes
+      id: check-changes
+      shell: bash
+      run: |
+        COMPARE_WITH=origin/"$TRUNK"
+        if [ "$TRUNK" = "" ]; then COMPARE_WITH='HEAD~1'; fi
+        CHANGE=false
+        COMMAND=$(git diff --name-only HEAD "$COMPARE_WITH" | grep "$PARRETN" || echo "false")
+        if [ "$COMMAND" != "false" ]; then CHANGE='true'; fi
+        echo "change=$(echo ${CHANGE})" >> $GITHUB_OUTPUT
+      env:
+        TRUNK: ${{ inputs.trunk }}
+        PATTERN: ${{ inputs.pattern }}

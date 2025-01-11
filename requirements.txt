@@ -1,0 +1,8 @@
+black
+python-dotenv
+langchain
+langchain_community
+langchain-ollama
+langchain-neo4j
+scikit-learn
+BeautifulSoup4

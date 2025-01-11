@@ -1,0 +1,138 @@
+name: validate-pr
+
+on:
+  pull_request:
+    branches: [main]
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: ${{ github.head_ref }}.${{ github.sha }}.validate-pr
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+
+    outputs:
+      codeowners-change: ${{ steps.codeowners-change.outputs.change }}
+      src-change: ${{ steps.src-change.outputs.change }}
+      shelltools-change: ${{ steps.shelltools-change.outputs.change }}
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: CODEOWNERS shange
+        id: codeowners-change
+        uses: ./.github/actions/check-changes
+        with:
+          pattern: '^.github/CODEOWNERS'
+
+      - name: Source code change
+        id: src-change
+        uses: ./.github/actions/check-changes
+        with:
+          pattern: '^src'
+
+      - name: Shell tools change
+        id: shelltools-change
+        uses: ./.github/actions/check-changes
+        with:
+          pattern: '^tools'
+
+      - name: Print changes
+        run: |
+          echo "### Changes" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "|    Name    |     Value     |" >> $GITHUB_STEP_SUMMARY
+          echo "| ---------- | ------------- |" >> $GITHUB_STEP_SUMMARY
+          echo "| codeowners | ${CODEOWNERS} |" >> $GITHUB_STEP_SUMMARY
+          echo "| src        | ${SRC}        |" >> $GITHUB_STEP_SUMMARY
+          echo "| tools      | ${TOOLS}      |" >> $GITHUB_STEP_SUMMARY
+        env:
+          CODEOWNERS: ${{ steps.codeowners-change.outputs.change }}
+          SRC: ${{ steps.src-change.outputs.change }}
+          SHELLTOOLS: ${{ steps.shelltools-change.outputs.change }}
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-environment
+        with:
+          venv: '~/py312-venv'
+          install: false
+
+      - name: Commitlint
+        run: |
+          source "$VENV/bin/activate"
+          python3 -m pip install --upgrade commitizen
+          git checkout -b premerge
+          git fetch origin main:main
+          cz check --rev-range main..premerge
+          deactivate
+        env:
+          VENV: '~/py312-venv'
+
+  validate-codeowners:
+    needs: checks
+    if: ${{ needs.checks.outputs.codeowners-change == 'true' }}
+    uses: ./.github/workflows/validate-codeowners.yml
+    secrets: inherit
+
+  premerge-matrix:
+    needs: checks
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        venv: ['~/py311-venv', '~/py312-venv']
+
+    outputs:
+      success: ${{ steps.check.outputs.success || 'true' }}
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Setup environment
+        uses: ./.github/actions/check-changes
+        with:
+          venv: ${{ matrix.venv }}
+
+      - name: Lint tools
+        if: needs.checks.outputs.shelltools-change == 'true'
+        run: |
+          sudo apt install shellcheck
+          shellcheck tools/actions/**/*.sh
+
+      - name: Lint source code
+        if: needs.checks.outputs.src-change == 'true'
+        run: |
+          source "$VENV/bin/activate"
+          black ./src/ --check
+          deactivate
+
+      - name: Set failure
+        id: check
+        if: ${{ failure() || cencelled() }}
+        run: echo "success=$(echo 'false')" >> $GITHUB_OUTPUT
+
+  premerge:
+    needs: premerge-matrix
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check result
+        run: |
+          if [[ "$PREMERGE_MATRIX" != "true" ]]; then exit 1; fi
+          echo "### :rocket: Premerge checks succeeded" >> $GITHUB_STEP_SUMMARY
+        env:
+          PREMERGE_MATRIX: ${{ needs.premerge-matrix.outputs.success }}
