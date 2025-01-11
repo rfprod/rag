@@ -19,10 +19,14 @@ runs:
         rm -rf "$VENV"
         case $VENV in
           *py311*)
+            sudo add-apt-repository ppa:deadsnakes/ppa
+            sudo apt update
             sudo apt install -y python3.11 python3.11-venv
             python3.11 -m venv "$VENV"
             ;;
           *py312*)
+            sudo add-apt-repository ppa:deadsnakes/ppa
+            sudo apt update
             sudo apt install -y python3.12 python3.12-venv
             python3.12 -m venv "$VENV"
             ;;
@@ -33,8 +37,8 @@ runs:
         esac
         source "$VENV/bin/activate"
         python3 --version
-        if [ "$INSTALL" = "true" ]; then \
-          python3 -m pip install --quiet -r requirements.txt \
+        if [ "$INSTALL" = "true" ]; then
+          python3 -m pip install --quiet -r requirements.txt
         fi
       env:
         VENV: ${{ inputs.venv }}

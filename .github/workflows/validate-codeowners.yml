@@ -28,7 +28,7 @@ jobs:
       - name: Get codeowners
         id: codeowners
         run: |
-          RESULT=$(bash tools/shell/actions/codeowners/codeowners.sh)
+          RESULT=$(bash tools/actions/codeowners/codeowners.sh)
           echo "matrix=$RESULT" >> $GITHUB_OUTPUT
           echo "$RESULT"
 
