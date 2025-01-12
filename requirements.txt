@@ -1,4 +1,6 @@
 black
+pre-commit
+
 python-dotenv
 tiktoken
 langchain
@@ -7,3 +9,6 @@ langchain-ollama
 langchain-neo4j
 scikit-learn
 BeautifulSoup4
+
+fastapi
+uvicorn

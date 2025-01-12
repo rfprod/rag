@@ -123,7 +123,7 @@ jobs:
         if: ${{ needs.checks.outputs.src-change == 'true' || needs.checks.outputs.requirements-change == 'true'}}
         run: |
           source "$VENV/bin/activate"
-          black ./src/ --check
+          pre-commit run --all
           deactivate
         env:
           VENV: ${{ matrix.venv }}
