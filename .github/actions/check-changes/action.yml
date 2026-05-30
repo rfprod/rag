@@ -7,14 +7,14 @@ inputs:
     default: main
   pattern:
     description: A regular expression for giltering Git output.
-    default: '^.*'
+    default: "^.*"
 outputs:
   change:
     description: A string representation of a boolean value denoting presence or absence of changes matching the pattern.
     value: ${{ steps.check-changes.outputs.change }}
 
 runs:
-  using: 'composite'
+  using: "composite"
   steps:
     - name: Check changes
       id: check-changes

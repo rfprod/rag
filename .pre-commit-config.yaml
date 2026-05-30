@@ -16,4 +16,4 @@ repos:
         entry: black
         args: ["--check"]
         language: system
-        files: 'src/.*(.py)$'
+        files: "src/.*(.py)$"

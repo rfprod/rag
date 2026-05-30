@@ -1,3 +1,4 @@
+BeautifulSoup4
 black
 pre-commit
 
@@ -5,10 +6,10 @@ python-dotenv
 tiktoken
 langchain
 langchain_community
+langchain_text_splitters
 langchain-ollama
-langchain-neo4j
+langchain-qdrant
 scikit-learn
-BeautifulSoup4
 
 fastapi
 uvicorn

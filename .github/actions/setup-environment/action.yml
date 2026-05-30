@@ -8,7 +8,7 @@ inputs:
   install:
     description: Indicates whether to install project dependencies
     required: false
-    default: 'true'
+    default: "true"
 
 runs:
   using: "composite"

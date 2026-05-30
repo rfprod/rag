@@ -33,25 +33,25 @@ jobs:
         id: codeowners-change
         uses: ./.github/actions/check-changes
         with:
-          pattern: '^.github/CODEOWNERS'
+          pattern: "^.github/CODEOWNERS"
 
       - name: Source code change
         id: src-change
         uses: ./.github/actions/check-changes
         with:
-          pattern: '^src'
+          pattern: "^src"
 
       - name: Requirements change
         id: requirements-change
         uses: ./.github/actions/check-changes
         with:
-          pattern: '^requirements.txt'
+          pattern: "^requirements.txt"
 
       - name: Shell tools change
         id: shelltools-change
         uses: ./.github/actions/check-changes
         with:
-          pattern: '^tools'
+          pattern: "^tools"
 
       - name: Print changes
         run: |
@@ -70,7 +70,7 @@ jobs:
       - name: Setup environment
         uses: ./.github/actions/setup-environment
         with:
-          venv: '~/py312-venv'
+          venv: "~/py312-venv"
           install: false
 
       - name: Commitlint
@@ -82,7 +82,7 @@ jobs:
           cz check --rev-range main..premerge
           deactivate
         env:
-          VENV: '~/py312-venv'
+          VENV: "~/py312-venv"
 
   validate-codeowners:
     needs: checks
@@ -96,7 +96,7 @@ jobs:
 
     strategy:
       matrix:
-        venv: ['~/py311-venv', '~/py312-venv']
+        venv: ["~/py311-venv", "~/py312-venv"]
 
     outputs:
       success: ${{ steps.check.outputs.success || 'true' }}
