@@ -1,15 +1,23 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 import uvicorn
 
-from app import rag_application
+import app as rag_module
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    rag_module.initialize()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/")
 async def root(question: str | None = None):
     if question:
-        answer = rag_application.run(question)
+        answer = rag_module.rag_application.run(question)
         return {"question": question, "answer": answer}
     return {
         "message": "RAG application is online. Pass a `question` as a query parameter to this endpoint."

@@ -18,12 +18,14 @@ text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
 
 doc_splits = text_splitter.split_documents(docs_list)
 
-embedding = OllamaEmbeddings(base_url="http://localhost:11434", model="llama3.2:latest")
+embedding = OllamaEmbeddings(
+    base_url="http://localhost:11434", model="embeddinggemma:latest"
+)
 
 vector_store = QdrantVectorStore.from_documents(
     documents=doc_splits,
     embedding=embedding,
-    collection_name="documents",
+    collection_name="rag-app",
     url=os.getenv("QDRANT_URL", "http://localhost:6333"),
-    api_key=os.getenv("QDRANT__SERVICE__API_KEY", None),
+    api_key=os.getenv("QDRANT_API_KEY", None),
 )

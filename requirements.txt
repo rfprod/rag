@@ -1,15 +1,15 @@
 BeautifulSoup4
 black
 pre-commit
-
+# RAG
 python-dotenv
 tiktoken
 langchain
 langchain_community
-langchain_text_splitters
 langchain-ollama
 langchain-qdrant
+qdrant-client
 scikit-learn
-
+# api
 fastapi
 uvicorn
