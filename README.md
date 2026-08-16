@@ -10,6 +10,7 @@ In order to run own copy of the project one must fulfill the following requireme
 
 - [Python 3.12](https://www.python.org/downloads/release/python-3120/)
 - [Git](https://git-scm.com/)
+- [uv](https://github.com/astral-sh/uv)
 
 ### Virtual environments
 
@@ -20,7 +21,8 @@ The following sequence of commands creates an environment, activates the environ
 ```bash
 python3 -m venv ~/path-to-venv; \
   source ~/path-to-venv/bin/activate; \
-  pip3 install -r ./requirements.txt
+  uv pip compile requirements.txt --output-file requirements.uv.txt; \
+  uv pip sync ./requirements.uv.txt
 ```
 
 ## Committing changes to the repo
