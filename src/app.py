@@ -92,5 +92,7 @@ def initialize():
 
     question = "What operating systems does nx-ng-starter support?"
     answer = rag_application.run(question)
+    print("--- startup test ---")
     print("Question:", question)
-    print("Answer:", answer)
+    print("Answer:", answer.strip())
+    print("--- startup test ---")
