@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, responses, staticfiles
 import uvicorn
 
 import app as rag_module
@@ -13,6 +13,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+app.mount("/static", staticfiles.StaticFiles(directory="static"), name="static")
+
 
 @app.get("/")
 async def root(question: str | None = None):
@@ -22,6 +24,11 @@ async def root(question: str | None = None):
     return {
         "message": "RAG application is online. Pass a `question` as a query parameter to this endpoint."
     }
+
+
+@app.get("/ui")
+async def ui():
+    return responses.FileResponse("static/index.html")
 
 
 if __name__ == "__main__":

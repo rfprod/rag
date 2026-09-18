@@ -9,26 +9,27 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
+NC_BOLD='\033[1m'
 
 if docker ps | grep -q qdrant; then
-  echo "Qdrant is already running. Skipping docker run."
+  echo -e "${GREEN}[ok]${NC} Qdrant is already running. Skipping docker run."
 else
-  echo "Starting Qdrant container..."
+  echo -e "${YELLOW}[i]${NC} Starting Qdrant container..."
 
   if [ -f .env ]; then
     # shellcheck source=/dev/null
     source .env
   else
-    echo "Warning: .env file not found."
+    echo -e "${YELLOW}[warn]${NC} .env file not found."
   fi
 
   if [ -z "$QDRANT_API_KEY" ]; then
-    echo "Error: QDRANT_API_KEY not found in .env and is not set globally"
+    echo -e "${RED}[err]${NC} QDRANT_API_KEY not found in .env and is not set globally.}"
     exit 1
   fi
 
   if [ -z "$QDRANT_API_KEY_READ_ONLY" ]; then
-    echo "Error: QDRANT_API_KEY_READ_ONLY not found in .env and is not set globally"
+    echo -e "${RED}[err]${NC} QDRANT_API_KEY_READ_ONLY not found in .env and is not set globally."
     exit 1
   fi
 
@@ -60,6 +61,8 @@ trap cleanup EXIT
 
 echo -e "${YELLOW}[i]${NC} Qdrant is running with data dir $DATA_DIR. Waiting for Qdrant..."
 
+echo -e "${YELLOW}[i]${NC} Qdrant dashboard is available on ${NC_BOLD}http://localhost:6333/dashboard${NC}"
+
 MAX_WAIT_SEC=60
 SLEEP_SEC=1
 ELAPSED=0
@@ -73,6 +76,7 @@ while [ "$ELAPSED" -lt "$MAX_WAIT_SEC" ]; do
   sleep "$SLEEP_SEC"
   ELAPSED=$((ELAPSED + SLEEP_SEC))
 done
+
 if [ "$STARTUP_STATUS" != "200" ]; then
   echo -e "${RED}[err]{$NC} Qdrant startup timeout. Last HTTP status: $STARTUP_STATUS"
   echo -e "${YELLOW}[i]${NC} Qdrant container logs:"
@@ -80,10 +84,10 @@ if [ "$STARTUP_STATUS" != "200" ]; then
   exit 1
 fi
 
-echo "Qdrant status:"
+echo -e "${YELLOW}[i]${NC} Qdrant status:"
 docker ps | grep qdrant
 
-echo "Qdrant version check:"
+echo -e "${YELLOW}[i]${NC} Qdrant version check:"
 curl -H "api-key: $QDRANT_API_KEY_READ_ONLY" http://localhost:6333 | grep version
 
 cd "$(dirname "$0")" || exit 1
