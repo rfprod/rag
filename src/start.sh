@@ -39,9 +39,11 @@ else
   # Run Qdrant container
   # This starts Qdrant on port 6333 with persistent storage in /var/lib/qdrant/storage
   # API key authentication documentation: https://github.com/hdt12a1/qdrant-tutorial/blob/main/api_key_authentication.md
+  docker network create app-rag-net
   docker run -d \
     --name qdrant-rag-app \
     --restart always \
+    --network app-rag-net \
     -p 6333:6333 \
     -p 6334:6334 \
     -v "$DATA_DIR:/qdrant/storage" \
@@ -54,6 +56,7 @@ cleanup() {
   echo -e "${YELLOW}[i]${NC} Qdrant docker container cleanup..."
   docker stop qdrant-rag-app >/dev/null 2>&1 || true
   docker rm qdrant-rag-app >/dev/null 2>&1 || true
+  docker network rm app-rag-net
 
   echo -e "${GREEN}[ok]{$NC} Done."
 }

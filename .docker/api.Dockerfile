@@ -1,23 +1,37 @@
-FROM ollama/ollama:0.5.5
+FROM ollama/ollama:0.40.3
 
-# TODO: this container configuration is not complete
+##
+# This container image needs three environment variables provided at runtime to operate:
+# - QDRANT_URL
+# - QDRANT_API_KEY
+# - QDRANT_API_KEY_READ_ONLY
+##
 
-# Create app directory.
+ENV DEBIAN_FRONTEND=noninteractive
+
 WORKDIR /app
 
 COPY /src ./src
+COPY /src/static ./static
 COPY /requirements.txt ./
+COPY /tools/docker/entrypoint.sh ./
+RUN chmod +x ./entrypoint.sh
 
-RUN apt install python3.12; \
-  python3 --version; \
-  pip3 install -r ./requirements.txt; \
-  ollama --version; \
-  ollama pull llama3.2; \
-  ollama list
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends software-properties-common gnupg dirmngr ca-certificates \
+    && add-apt-repository -y ppa:deadsnakes/ppa \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends python3.12 python3.12-venv \
+    && rm -rf /var/lib/apt/lists/* \
+    && python3.12 --version \
+    && python3.12 -m venv /opt/venv
 
-# Configure exposed port.
+ENV PATH="/opt/venv/bin:$PATH"
+
+RUN python -m pip install --no-cache-dir -r ./requirements.txt \
+    && rm -rf /var/lib/apt/lists/*
+
 EXPOSE 8000
-# Set up a health check.
 HEALTHCHECK --interval=5m --timeout=3s CMD curl --fail http://localhost:8000 || exit 1
-# Define startup command.
-CMD [ "python3", "./src/api.py" ]
+ENTRYPOINT []
+CMD ["/app/entrypoint.sh"]
