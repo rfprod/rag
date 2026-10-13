@@ -14,6 +14,6 @@ repos:
         name: Python code format check
         description: This hook checks py files using black.
         entry: black
-        args: ["--check"]
+        args: ['--check']
         language: system
-        files: "src/.*(.py)$"
+        files: 'src/.*(.py)$'
