@@ -5,9 +5,9 @@ pre-commit
 python-dotenv
 tiktoken
 langchain
-langchain_community
 langchain-ollama
 langchain-qdrant
+langchain-text-splitters
 qdrant-client
 scikit-learn
 # api
