@@ -1,4 +1,4 @@
-FROM ollama/ollama:0.40.13
+FROM ollama/ollama:0.40.15
 
 ##
 # This container image needs three environment variables provided at runtime to operate:
