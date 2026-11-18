@@ -9,11 +9,35 @@ from langchain_core.documents import Document
 from langchain_qdrant import QdrantVectorStore
 from langchain_ollama import OllamaEmbeddings
 
+import skills as skills_module
+
 load_dotenv()
 
 
 def load_markdown_urls(urls: list[str]) -> list[Document]:
-    """Fetch public raw Markdown URLs and return LangChain Documents."""
+    """Fetch raw Markdown from public URLs and wrap each one as a LangChain Document.
+
+    Each URL is requested with a 30-second timeout. The response body becomes
+    the document's ``page_content``, and the URL is stored in
+    ``metadata["source"]`` so each document can be traced to its origin.
+
+    URLs are fetched one at a time in the order given. The first failed request
+    raises an exception, so no documents are returned for the remaining URLs.
+
+    Args:
+        urls: Public URLs that point to raw Markdown files, such as
+            ``https://raw.githubusercontent.com/...`` links. Responses are
+            stored as-is, so a URL that returns HTML rather than Markdown
+            will produce a document containing HTML.
+
+    Returns:
+        One Document per URL, in the same order as ``urls``.
+
+    Raises:
+        requests.HTTPError: If any URL returns a 4xx or 5xx status code.
+        requests.RequestException: If a request fails because of a connection
+            error or a timeout.
+    """
     docs = []
 
     for url in urls:
@@ -29,10 +53,13 @@ def load_markdown_urls(urls: list[str]) -> list[Document]:
     return docs
 
 
-urls = [
-    "https://raw.githubusercontent.com/rfprod/nx-ng-starter/refs/heads/main/README.md"
-]
-docs_list = load_markdown_urls(urls)
+docs_list = []
+for url, skill in skills_module.skill_urls.items():
+    documents = load_markdown_urls([url])
+    for doc in documents:
+        doc.metadata["skill"] = skill
+    docs_list.extend(documents)
+
 text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
     chunk_size=250, chunk_overlap=0
 )
