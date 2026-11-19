@@ -35,4 +35,6 @@
   "yaml.format.proseWrap": "always",
   "yaml.format.printWidth": 140,
   "yaml.validate": true,
+  "python.terminal.useEnvFile": true,
+  "python.analysis.typeCheckingMode": "standard",
 }

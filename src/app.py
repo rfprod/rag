@@ -1,5 +1,5 @@
 import os
-from dotenv import load_dotenv
+import re
 
 import subprocess
 import sys
@@ -16,8 +16,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnableSerializable
 
 import skills as skills_module
-
-load_dotenv()
+import configuration as configuration_module
 
 
 def skill_filter(skill: str) -> models.Filter:
@@ -86,19 +85,20 @@ class RAGApplication:
 
     def __init__(
         self,
-        retrievers: dict[str, VectorStoreRetriever],
+        default_retriever: VectorStoreRetriever,
+        scoped_retrievers: dict[str, VectorStoreRetriever],
         rag_chain: RunnableSerializable[dict[str, str], str],
     ):
         """Initialize the application with its retrievers and generation chain.
 
         Args:
-            retrievers: Mapping of skill names to retrievers. Should include a
-                ``"default"`` entry if questions may arrive without a skill
-                or with an unknown one.
+            scoped_retrievers: Mapping of skill names to retrievers. Should not
+                include a ``"default"`` entry as it is stored separately.
             rag_chain: Chain that takes ``{"question": ..., "documents": ...}``
                 and returns the generated answer.
         """
-        self.retrievers = retrievers
+        self.default_retriever = default_retriever
+        self.scoped_retrievers = scoped_retrievers
         self.rag_chain = rag_chain
 
     def run(self, question: str, skill: str | None) -> str:
@@ -122,9 +122,9 @@ class RAGApplication:
                 retriever is configured.
         """
         retriever = (
-            self.retrievers.get(skill)
-            if skill in self.retrievers
-            else self.retrievers.get("default")
+            self.scoped_retrievers.get(skill)
+            if skill in self.scoped_retrievers
+            else self.default_retriever
         )
 
         if retriever is None:
@@ -134,7 +134,11 @@ class RAGApplication:
 
         documents = retriever.invoke(question)
         doc_texts = "\n".join([doc.page_content for doc in documents])
-        answer = self.rag_chain.invoke({"question": question, "documents": doc_texts})
+        raw_answer = self.rag_chain.invoke(
+            {"question": question, "documents": doc_texts}
+        )
+        cleaned_answer = re.sub(r"<think>.*?</think>", "", raw_answer, flags=re.DOTALL)
+        answer = cleaned_answer.strip().strip("\"'`.").lower()
         return answer
 
 
@@ -142,20 +146,61 @@ rag_application: RAGApplication | None = None
 
 
 def initialize() -> None:
-    """The initialization function must be called once during the application startup."""
+    """Initialize the RAG application and store it in the module-level global.
+
+    This function must be called exactly once during application startup, before
+    any code reads ``rag_application``. It performs these steps in order:
+
+    1. Connects to Qdrant at the ``QDRANT_URL`` environment variable, defaulting
+       to ``http://localhost:6333``, using ``QDRANT_API_KEY`` if it is set.
+    2. Checks whether the collection for embeddings exists. If the collection is
+       missing (HTTP 404), runs ``embeddings.py`` in the same directory as this
+       module in a subprocess to create it. Any other error is re-raised.
+    3. Builds an Ollama embedding model (``embeddinggemma:latest``) and a Qdrant
+       vector store on top of the collection.
+    4. Creates a default retriever returning the top 4 chunks, and one
+       skill-scoped retriever per skill in ``skills_module.skill_urls``, each
+       filtered with ``skill_filter(skill)``. The default retriever is stored
+       under the key ``"default"``.
+    5. Builds the RAG chain from a prompt template, a chat model
+       (``gemma3n:latest``, temperature 0), and a string output parser.
+    6. Assigns the resulting ``RAGApplication`` to the module-level
+       ``rag_application`` global.
+    7. Runs a startup test question against the new application and prints the
+       question and answer. This test requires the LLM to be reachable.
+
+    Side effects:
+        Sets the global ``rag_application``. Writes status messages to standard
+        output. May start a subprocess that embeds documents and writes to
+        Qdrant.
+
+    Raises:
+        RuntimeError: If ``embeddings.py`` exits with a non-zero status while
+            the collection is being created.
+        Exception: Any error from the Qdrant client other than a 404 for the
+            embeddings collection, and any error from the Ollama models or the
+            startup test question, is propagated unchanged.
+    """
 
     global rag_application
 
+    if rag_application is not None:
+        return
+
     qdrant_client = QdrantClient(
-        url=os.getenv("QDRANT_URL", "https://localhost:6333"),
-        api_key=os.getenv("QDRANT_API_KEY", None),
+        url=configuration_module.QDRANT_URL,
+        api_key=configuration_module.QDRANT_API_KEY,
     )
 
     try:
-        qdrant_client.get_collection(collection_name="rag-app")
+        qdrant_client.get_collection(
+            collection_name=configuration_module.QDRANT_COLLECTION_NAME
+        )
     except Exception as e:
         if isinstance(e, UnexpectedResponse) and getattr(e, "status_code", None) == 404:
-            print("[i] Qdrant collection `rag-app` not found. Creating embeddings...")
+            print(
+                f"[i] Qdrant collection `{configuration_module.QDRANT_COLLECTION_NAME}` not found. Creating embeddings..."
+            )
             script_dir = os.path.dirname(os.path.abspath(__file__))
             result = subprocess.run(
                 [sys.executable, os.path.join(script_dir, "embeddings.py")],
@@ -168,18 +213,42 @@ def initialize() -> None:
                 print("[err] embeddings.py failed:")
                 print(result.stderr)
                 raise RuntimeError("embeddings.py failed during startup.")
-            print("[i] Collection `rag-app` created. Continuing with startup...")
+            print(
+                f"[i] Collection `{configuration_module.QDRANT_COLLECTION_NAME}` created. Continuing with startup..."
+            )
         else:
             raise
 
     embedding = OllamaEmbeddings(
-        base_url="http://localhost:11434", model="embeddinggemma:latest"
+        base_url=configuration_module.OLLAMA_BASE_URL,
+        model=configuration_module.OLLAMA_EMBEDDING_MODEL,
     )
 
     vector_store = QdrantVectorStore(
-        client=qdrant_client, collection_name="rag-app", embedding=embedding
+        client=qdrant_client,
+        collection_name=configuration_module.QDRANT_COLLECTION_NAME,
+        embedding=embedding,
     )
-    default_retriever = vector_store.as_retriever(k=4)
+    default_retriever = vector_store.as_retriever(k=configuration_module.RETRIEVER_K)
+
+    info = qdrant_client.get_collection(
+        collection_name=configuration_module.QDRANT_COLLECTION_NAME
+    )
+    vectors_config = info.config.params.vectors
+    if vectors_config is not None:
+        if isinstance(vectors_config, dict):
+            raise RuntimeError(
+                f"Collection `{configuration_module.QDRANT_COLLECTION_NAME}` uses named vectors, "
+                "but QdrantVectorStore expects a single unnamed vector."
+            )
+        stored_size = vectors_config.size
+
+        query_size = len(embedding.embed_query("dimension check"))
+        if stored_size != query_size:
+            raise RuntimeError(
+                f"Collection vector size {stored_size} does not match embedding model "
+                f"output {query_size}. Re-index or point QDRANT_COLLECTION_NAME at a matching collection."
+            )
 
     prompt = PromptTemplate(
         template="""You are an assistant for question-answering tasks.
@@ -194,7 +263,9 @@ def initialize() -> None:
     )
 
     llm = ChatOllama(
-        base_url="http://localhost:11434", model="gemma3n:latest", temperature=0
+        base_url=configuration_module.OLLAMA_BASE_URL,
+        model=configuration_module.OLLAMA_MODEL,
+        temperature=0,
     )
 
     rag_chain: RunnableSerializable[dict[str, str], str] = (
@@ -203,14 +274,17 @@ def initialize() -> None:
 
     skill_scoped_retrievers = {
         skill: vector_store.as_retriever(
-            search_kwargs={"k": 4, "filter": skill_filter(skill)}
+            search_kwargs={
+                "k": configuration_module.RETRIEVER_K,
+                "filter": skill_filter(skill),
+            }
         )
         for _, skill in skills_module.skill_urls.items()
     }
 
-    skill_scoped_retrievers["default"] = default_retriever
-
-    rag_application = RAGApplication(skill_scoped_retrievers, rag_chain)
+    rag_application = RAGApplication(
+        default_retriever, skill_scoped_retrievers, rag_chain
+    )
 
     question: str = "What operating systems does nx-ng-starter support?"
     answer = rag_application.run(question, None)
