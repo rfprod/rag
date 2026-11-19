@@ -96,8 +96,6 @@ print_help() {
     are missing, or Qdrant does not start within 60 seconds). \n"
 }
 
-
-
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
   print_help
   exit 0
@@ -146,12 +144,12 @@ run_qdrant() {
       echo -e "${YELLOW}[warn]${NC} .env file not found."
     fi
 
-    if [ -z "$QDRANT_API_KEY" ]; then
+    if [ -z "${QDRANT_API_KEY:-}" ]; then
       echo -e "${RED}[err]${NC} QDRANT_API_KEY not found in .env and is not set globally."
       exit 1
     fi
 
-    if [ -z "$QDRANT_API_KEY_READ_ONLY" ]; then
+    if [ -z "${QDRANT_API_KEY_READ_ONLY:-}" ]; then
       echo -e "${RED}[err]${NC} QDRANT_API_KEY_READ_ONLY not found in .env and is not set globally."
       exit 1
     fi

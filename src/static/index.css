@@ -65,3 +65,23 @@ button:disabled {
   color: #c00;
   margin-top: 16px;
 }
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.actions button {
+  margin-top: 0;
+}
+
+select {
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background: white;
+  font: inherit;
+  font-size: 16px;
+}
