@@ -2,26 +2,54 @@ import asyncio
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, responses, HTTPException, staticfiles
+from starlette.responses import PlainTextResponse
 import uvicorn
 
 import app as rag_module
 
 import skills as skills_module
+import mcp_server as mcp_server_module
+import configuration as configuration_module
+
+semaphore = asyncio.Semaphore(configuration_module.MAX_CONCURRENCY)
+
+mcp_service: mcp_server_module.RAGApplicationMCP | None = None
+_mcp_asgi_app = None
+
+
+async def mcp_asgi(scope, receive, send):
+    """Forward /mcp requests to the MCP app once it has been created in the lifespan."""
+    if _mcp_asgi_app is None:
+        await PlainTextResponse("MCP server is not ready.", status_code=503)(
+            scope, receive, send
+        )
+        return
+    await _mcp_asgi_app(scope, receive, send)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global mcp_service, _mcp_asgi_app
+
     rag_module.initialize()
-    yield
+
+    mcp_service = mcp_server_module.RAGApplicationMCP(
+        rag_module.rag_application, semaphore
+    )
+    mcp = mcp_service.get_mcp()
+    _mcp_asgi_app = mcp.streamable_http_app(
+        streamable_http_path="/", stateless_http=True
+    )
+
+    async with mcp.session_manager.run():
+        yield
 
 
 app = FastAPI(lifespan=lifespan)
 
 app.mount("/static", staticfiles.StaticFiles(directory="static"), name="static")
 
-MAX_CONCURRENCY = 1
-TIMEOUT = 3
-semaphore = asyncio.Semaphore(MAX_CONCURRENCY)
+app.mount("/mcp", mcp_asgi)
 
 
 @app.get("/")
@@ -39,12 +67,14 @@ async def root(question: str | None = None, skill: str | None = None):
         )
 
     try:
-        await asyncio.wait_for(semaphore.acquire(), timeout=TIMEOUT)
+        await asyncio.wait_for(
+            semaphore.acquire(), timeout=configuration_module.TIMEOUT
+        )
     except TimeoutError:
         raise HTTPException(
             status_code=503,
-            detail=f"Concurrent request capacity reached. Maximum concurrency: {MAX_CONCURRENCY}.",
-            headers={"Retry-after": f"{TIMEOUT}"},
+            detail=f"Concurrent request capacity reached. Maximum concurrency: {configuration_module.MAX_CONCURRENCY}.",
+            headers={"Retry-after": f"{configuration_module.TIMEOUT}"},
         )
 
     answer: str = ""
@@ -69,6 +99,14 @@ async def skills():
         skills.append(skill)
 
     return responses.JSONResponse(skills)
+
+
+@app.get("/tools", response_model=list[str])
+async def tools():
+    if mcp_service is None:
+        raise HTTPException(status_code=503, detail="MCP server is not initialized.")
+    tool_list = await mcp_service.get_mcp().list_tools()
+    return [tool.name for tool in tool_list]
 
 
 @app.get("/ui")

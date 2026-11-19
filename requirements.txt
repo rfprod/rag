@@ -13,3 +13,5 @@ scikit-learn
 # api
 fastapi
 uvicorn
+# tools
+mcp

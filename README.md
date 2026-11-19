@@ -16,6 +16,7 @@
 
 Using [commitizen cli](https://pypi.org/project/commitizen/) is mandatory.
 
+
 ## Quickstart
 
 1. **Virtual environment**
@@ -31,7 +32,20 @@ python3 -m venv ~/path-to-venv; \
   uv pip sync ./requirements.uv.txt
 ```
 
-2. **Startup script**
+2. **Environment variables**
+
+In the project root, create a `.env` file with the following content
+
+```env
+QDRANT_URL="http://localhost:6333"
+QDRANT_API_KEY="your-secure-read-and-write-key"
+QDRANT_API_KEY_READ_ONLY="your-secure-read-only-key"
+OLLAMA_BASE_URL="http://localhost:11434"
+OLLAMA_MODEL="qwen3:4b"
+OLLAMA_EMBEDDING_MODEL="qwen3-embedding:4b"
+```
+
+3. **Startup script**
 
 The following startup script automatically executed the routines required to run the application.
 

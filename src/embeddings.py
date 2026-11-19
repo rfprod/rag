@@ -1,6 +1,5 @@
-import os
 import requests
-from dotenv import load_dotenv
+
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -10,8 +9,7 @@ from langchain_qdrant import QdrantVectorStore
 from langchain_ollama import OllamaEmbeddings
 
 import skills as skills_module
-
-load_dotenv()
+import configuration as configuration_module
 
 
 def load_markdown_urls(urls: list[str]) -> list[Document]:
@@ -67,13 +65,15 @@ text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
 doc_splits = text_splitter.split_documents(docs_list)
 
 embedding = OllamaEmbeddings(
-    base_url="http://localhost:11434", model="embeddinggemma:latest"
+    base_url=configuration_module.OLLAMA_BASE_URL,
+    model=configuration_module.OLLAMA_EMBEDDING_MODEL,
 )
 
 vector_store = QdrantVectorStore.from_documents(
     documents=doc_splits,
     embedding=embedding,
-    collection_name="rag-app",
-    url=os.getenv("QDRANT_URL", "http://localhost:6333"),
-    api_key=os.getenv("QDRANT_API_KEY", None),
+    force_recreate=True,
+    collection_name=configuration_module.QDRANT_COLLECTION_NAME,
+    url=configuration_module.QDRANT_URL,
+    api_key=configuration_module.QDRANT_API_KEY,
 )

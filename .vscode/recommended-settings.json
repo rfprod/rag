@@ -19,5 +19,6 @@
     "spring-boot-properties",
     "azcli",
     "bats"
-  ]
+  ],
+  "python.venvPath": "~/py312-venv"
 }
