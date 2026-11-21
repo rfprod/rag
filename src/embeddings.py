@@ -36,7 +36,8 @@ def load_markdown_urls(urls: list[str]) -> list[Document]:
         requests.RequestException: If a request fails because of a connection
             error or a timeout.
     """
-    docs = []
+
+    docs: list[Document] = []
 
     for url in urls:
         response = requests.get(url, timeout=30)
@@ -51,7 +52,7 @@ def load_markdown_urls(urls: list[str]) -> list[Document]:
     return docs
 
 
-docs_list = []
+docs_list: list[Document] = []
 for url, skill in skills_module.skill_urls.items():
     documents = load_markdown_urls([url])
     for doc in documents:

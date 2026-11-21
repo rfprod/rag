@@ -57,30 +57,46 @@ bash src/start.sh
 Successful application startup output would look similar to the example presented below.
 
 ```plaintext
+[ok] Ollama is already installed, skipping installation.
+ollama version is 0.40.16
+[ok] Model qwen3-embedding:0.6b already exists locally, skipping.
+[ok] Model qwen3:1.7b already exists locally, skipping.
+[ok] Model qwen3:4b already exists locally, skipping.
+NAME                     ID              SIZE      MODIFIED
+qwen3-embedding:0.6b     ac6da0dfba84    639 MB    46 hours ago
+qwen3:1.7b               8f68893c685c    1.4 GB    46 hours ago
+qwen3:4b                 359d7dd4bcda    2.5 GB    2 days ago
+embeddinggemma:latest    85462619ee72    621 MB    2 days ago
+gemma3n:latest           0a377808afea    9.8 GB    2 days ago
 [ok] Image 'qdrant/qdrant' already exists locally. Skipping pull.
 [i] Starting Qdrant container...
-90ac28aca13b86046fa873a71b8491f77d6f16138f11b798778b38ddb4794b9e
-67a0ed4988c951b4fb026ca9f2800548f6c7a30c74a9339bd751d2e6de66818e
+384120eb8ea8b1266e842f5e57efab2eedf60172afb8f90ef02965c585aa4a1e
+d498bb9e9f03bcfbde6f27d2801acda82043a4f6d82d10781ab3a019df2b4f24
 [i] Qdrant is running with data dir /home/user/qdrant. Waiting for Qdrant...
 [i] Qdrant dashboard is available on http://localhost:6333/dashboard
+[i] EMBEDDINGS=1 set, creating embeddings...
+/home/user/py312-venv/lib/python3.12/site-packages/langchain_qdrant/qdrant.py:921: UserWarning: Api key is used with an insecure connection.
+  client = QdrantClient(**client_options)
 [i] Qdrant status:
-67a0ed4988c9   qdrant/qdrant:latest   "./entrypoint.sh"   1 second ago   Up 1 second   0.0.0.0:6333-6334->6333-6334/tcp, [::]:6333-6334->6333-6334/tcp   qdrant-rag-app
+d498bb9e9f03   qdrant/qdrant:latest   "./entrypoint.sh"   27 seconds ago   Up 26 seconds   0.0.0.0:6333-6334->6333-6334/tcp, [::]:6333-6334->6333-6334/tcp   qdrant-rag-app
 [i] Qdrant version check:
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
-100   112  100   112    0     0   117k      0 --:--:-- --:--:-- --:--:--  109k
-{"title":"qdrant - vector search engine","version":"1.20.0","commit":"222b2e44ab1c3f17e8246396ead6558e45041df7"}
+100   112  100   112    0     0   114k      0 --:--:-- --:--:-- --:--:--  109k
+{"title":"qdrant - vector search engine","version":"1.20.2","commit":"23065a0bf6857c3e5da45f6c8939cc746cc0580e"}
 INFO:     Will watch for changes in these directories: ['/home/user/git/rag/src']
 INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process [28317] using StatReload
-INFO:     Started server process [28320]
+INFO:     Started reloader process [47088] using StatReload
+INFO:     Started server process [47090]
 INFO:     Waiting for application startup.
-/home/user/git/rag/src/app.py:38: UserWarning: Api key is used with an insecure connection.
+/home/user/git/rag/src/app.py:190: UserWarning: Api key is used with an insecure connection.
   qdrant_client = QdrantClient(
+{'rag-app': VectorParams(size=1024, distance=<Distance.COSINE: 'Cosine'>, hnsw_config=None, quantization_config=None, on_disk=None, memory=None, datatype=None, multivector_config=None)}
 --- startup test ---
 Question: What operating systems does nx-ng-starter support?
-Answer: I am sorry, but I do not have access to any documents. Therefore, I don't know what operating systems nx-ng-starter supports. I am unable to answer your question based on the provided context.
+Answer: i don't know the specific operating systems that nx-ng-starter supports based on the provided documents. the documents mention it can build web, mobile (with capacitor), and desktop (with electron) applications, but don't explicitly list supported operating systems
 --- startup test ---
+StreamableHTTP session manager started
 INFO:     Application startup complete.
 ```
 
