@@ -10,6 +10,11 @@ YELLOW='\033[1;33m'
 NC='\033[0m'
 NC_BOLD='\033[1m'
 
+if [[ -z "${VIRTUAL_ENV:-}" ]]; then
+  echo -e "${RED}[err]${NC} activate a ${NC_BOLD}Python virtual environment${NC} before running this script." >&2
+  exit 1
+fi
+
 print_help() {
   local SCRIPT_NAME
   SCRIPT_NAME="$(basename "$0")"
@@ -101,6 +106,34 @@ if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
   exit 0
 fi
 
+prepare_ollama() {
+  if command -v ollama >/dev/null 2>&1; then
+    echo -e "${GREEN}[ok]${NC} ${NC_BOLD}Ollama${NC} is already installed, skipping installation."
+  else
+    echo -e "${YELLOW}[i]${NC} ${NC_BOLD}Ollama${NC} not found. Installing..."
+    curl -fsSL https://ollama.com/install.sh | sh
+  fi
+
+  ollama --version
+
+  declare MODELS=("qwen3-embedding:0.6b" "qwen3:1.7b" "qwen3:4b")
+
+  INSTALLED_MODELS=$(ollama list | awk 'NR>1 {print $1}')
+
+  for MODEL in "${MODELS[@]}"; do
+    if grep -Fxq "$MODEL" <<< "$INSTALLED_MODELS"; then
+      echo -e "${GREEN}[ok]${NC} Model ${NC_BOLD}$MODEL${NC} already exists locally, skipping."
+    else
+      echo -e "${YELLOW}[i]${NC} Pulling model ${NC_BOLD}$MODEL${NC}..."
+      ollama pull "$MODEL"
+    fi
+  done
+
+  ollama list
+}
+
+prepare_ollama
+
 prepare_qdrant_image() {
   local IMAGE
   IMAGE="${QDRANT_IMAGE:-qdrant/qdrant}"
@@ -109,17 +142,17 @@ prepare_qdrant_image() {
   FORCE_PULL="${FORCE_PULL_QDRANT:-0}"
 
   if ! command -v docker >/dev/null 2>&1; then
-    echo -e "${RED}[err]${NC} docker is not installed or not on PATH." >&2
+    echo -e "${RED}[err]${NC} docker is not installed or not on ${NC_BOLD}PATH${NC}." >&2
     exit 1
   fi
 
   if ! docker info >/dev/null 2>&1; then
-    echo -e "${RED}[err]${NC} cannot reach the Docker daemon. Is it running?" >&2
+    echo -e "${RED}[err]${NC} cannot reach the ${NC_BOLD}Docker${NC} daemon. Is it running?" >&2
     exit 1
   fi
 
   if [[ "$FORCE_PULL" == "1" ]]; then
-    echo -e "${YELLOW}[i]${NC} FORCE_PULL=1 set, pulling '$IMAGE'..."
+    echo -e "${YELLOW}[i]${NC} ${NC_BOLD}FORCE_PULL=1${NC} set, pulling '$IMAGE'..."
     docker pull "$IMAGE"
   elif docker image inspect "$IMAGE" >/dev/null 2>&1; then
     echo -e "${GREEN}[ok]${NC} Image '$IMAGE' already exists locally. Skipping pull."
@@ -133,24 +166,24 @@ prepare_qdrant_image
 
 run_qdrant() {
   if docker ps | grep -q qdrant; then
-    echo -e "${GREEN}[ok]${NC} Qdrant is already running. Skipping docker run."
+    echo -e "${GREEN}[ok]${NC} ${NC_BOLD}Qdrant${NC} is already running. Skipping docker run."
   else
-    echo -e "${YELLOW}[i]${NC} Starting Qdrant container..."
+    echo -e "${YELLOW}[i]${NC} Starting ${NC_BOLD}Qdrant${NC} container..."
 
     if [ -f .env ]; then
       # shellcheck source=/dev/null
       source .env
     else
-      echo -e "${YELLOW}[warn]${NC} .env file not found."
+      echo -e "${YELLOW}[warn]${NC} ${NC_BOLD}.env${NC} file not found."
     fi
 
     if [ -z "${QDRANT_API_KEY:-}" ]; then
-      echo -e "${RED}[err]${NC} QDRANT_API_KEY not found in .env and is not set globally."
+      echo -e "${RED}[err]${NC} ${NC_BOLD}QDRANT_API_KEY${NC} not found in .env and is not set globally."
       exit 1
     fi
 
     if [ -z "${QDRANT_API_KEY_READ_ONLY:-}" ]; then
-      echo -e "${RED}[err]${NC} QDRANT_API_KEY_READ_ONLY not found in .env and is not set globally."
+      echo -e "${RED}[err]${NC} ${NC_BOLD}QDRANT_API_KEY_READ_ONLY${NC} not found in .env and is not set globally."
       exit 1
     fi
 
@@ -173,9 +206,9 @@ run_qdrant() {
       -e QDRANT_API_KEY_READ_ONLY="$QDRANT_API_KEY_READ_ONLY" \
       qdrant/qdrant:latest
 
-    echo -e "${YELLOW}[i]${NC} Qdrant is running with data dir $DATA_DIR. Waiting for Qdrant..."
+    echo -e "${YELLOW}[i]${NC} ${NC_BOLD}Qdrant${NC} is running with data dir $DATA_DIR. Waiting for Qdrant..."
 
-    echo -e "${YELLOW}[i]${NC} Qdrant dashboard is available on ${NC_BOLD}http://localhost:6333/dashboard${NC}"
+    echo -e "${YELLOW}[i]${NC} ${NC_BOLD}Qdrant${NC} dashboard is available on ${NC_BOLD}http://localhost:6333/dashboard${NC}"
   fi
 }
 
@@ -186,7 +219,7 @@ create_embeddings() {
   EMBEDDINGS="${CREATE_EMBEDDINGS:-1}"
 
   if [[ "$EMBEDDINGS" == "1" ]]; then
-    echo -e "${YELLOW}[i]${NC} EMBEDDINGS=1 set, creating embeddings..."
+    echo -e "${YELLOW}[i]${NC} ${NC_BOLD}EMBEDDINGS=1${NC} set, creating embeddings..."
     python3 ./src/embeddings.py
   fi
 }
@@ -194,7 +227,7 @@ create_embeddings() {
 create_embeddings
 
 cleanup() {
-  echo -e "${YELLOW}[i]${NC} Qdrant docker container cleanup..."
+  echo -e "${YELLOW}[i]${NC} ${NC_BOLD}Qdrant${NC} docker container cleanup..."
   docker stop qdrant-rag-app >/dev/null 2>&1 || true
   docker rm qdrant-rag-app >/dev/null 2>&1 || true
   docker network rm app-rag-net
@@ -218,16 +251,16 @@ while [ "$ELAPSED" -lt "$MAX_WAIT_SEC" ]; do
 done
 
 if [ "$STARTUP_STATUS" != "200" ]; then
-  echo -e "${RED}[err]{$NC} Qdrant startup timeout. Last HTTP status: $STARTUP_STATUS"
-  echo -e "${YELLOW}[i]${NC} Qdrant container logs:"
-  docker logs --tail 50 qdrant-rag-app || echo -e "${RED}[warn]${NC} Could not fetch qdrant-rag-app Docker logs."
+  echo -e "${RED}[err]${NC} ${NC_BOLD}Qdrant${NC} startup timeout. Last HTTP status: $STARTUP_STATUS"
+  echo -e "${YELLOW}[i]${NC} ${NC_BOLD}Qdrant${NC} container logs:"
+  docker logs --tail 50 qdrant-rag-app || echo -e "${RED}[warn]${NC} Could not fetch ${NC_BOLD}qdrant-rag-app${NC} Docker container logs."
   exit 1
 fi
 
-echo -e "${YELLOW}[i]${NC} Qdrant status:"
+echo -e "${YELLOW}[i]${NC} ${NC_BOLD}Qdrant${NC} status:"
 docker ps | grep qdrant
 
-echo -e "${YELLOW}[i]${NC} Qdrant version check:"
+echo -e "${YELLOW}[i]${NC} ${NC_BOLD}Qdrant${NC} version check:"
 curl -H "api-key: $QDRANT_API_KEY_READ_ONLY" http://localhost:6333 | grep version
 
 cd "$(dirname "$0")" || exit 1

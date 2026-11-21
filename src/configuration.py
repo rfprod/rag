@@ -7,6 +7,7 @@ load_dotenv()
 MAX_CONCURRENCY = 1
 TIMEOUT = 3
 
+VECTOR_NAME = "rag-app"
 RETRIEVER_K = 4
 
 QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
