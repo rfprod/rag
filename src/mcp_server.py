@@ -47,6 +47,7 @@ class RAGApplicationMCP:
                 application failed to initialize before the MCP server was
                 created.
         """
+
         if rag_application is None:
             raise RuntimeError("MCP server error: RAG application is not initialized.")
 
@@ -73,6 +74,7 @@ class RAGApplicationMCP:
             Returns:
                 The generated answer as plain text.
             """
+
             return await self._guarded(
                 self.rag_application.run, question.strip(), skill
             )
@@ -97,6 +99,7 @@ class RAGApplicationMCP:
                 ``"content"`` (the chunk text) and ``"metadata"`` (the chunk's
                 metadata as stored in the knowledge base).
             """
+
             query = query.strip()
             resolved = await self._resolve_skill(query, skill)
             docs = await self._guarded(self._retriever_for(resolved).invoke, query)
@@ -110,6 +113,7 @@ class RAGApplicationMCP:
                 The skill names that can be passed as the ``skill`` argument of
                 ``ask_knowledge_base`` and ``search_documents``.
             """
+
             return self._skill_names()
 
         @mcp.tool()
@@ -123,6 +127,7 @@ class RAGApplicationMCP:
                 The current local date and time, for example
                 ``"2026-11-19T14:30:05"``.
             """
+
             return datetime.now().isoformat(timespec="seconds")
 
         @mcp.tool()
@@ -147,6 +152,7 @@ class RAGApplicationMCP:
                 IsADirectoryError: If the path refers to a directory.
                 UnicodeDecodeError: If the file is not valid UTF-8 text.
             """
+
             base = os.path.abspath("mcp_files")
             path = os.path.abspath(os.path.join(base, filename))
             if not path.startswith(base + os.sep):
@@ -160,6 +166,7 @@ class RAGApplicationMCP:
         Returns:
             The keys of the skill URL mapping, in definition order.
         """
+
         return [skill for _, skill in skills_module.skill_urls.items()]
 
     async def _guarded(self, fn, *args):
@@ -181,6 +188,7 @@ class RAGApplicationMCP:
                 ``configuration_module.TIMEOUT`` seconds.
             Exception: Any exception raised by ``fn`` is propagated unchanged.
         """
+
         await asyncio.wait_for(
             self.semaphore.acquire(), timeout=configuration_module.TIMEOUT
         )
@@ -199,6 +207,7 @@ class RAGApplicationMCP:
             The retriever registered for ``skill``. If ``skill`` is None or has
             no dedicated retriever, the ``"default"`` retriever is returned.
         """
+
         retrievers = self.rag_application.scoped_retrievers
         return (
             retrievers[skill]
@@ -217,6 +226,7 @@ class RAGApplicationMCP:
             The provided skill unchanged, the skill chosen by the router, or ``None``
             if the router found no match. ``None`` falls back to the default retriever.
         """
+
         if skill is not None:
             return skill
         return await self._guarded(asyncio.to_thread, self.router.route, question)
@@ -234,6 +244,7 @@ class RAGApplicationMCP:
         Returns:
             The generated answer.
         """
+
         resolved = await self._resolve_skill(question, skill)
         return await self._guarded(self.rag_application.run, question, resolved)
 
@@ -244,4 +255,5 @@ class RAGApplicationMCP:
             The ``MCPServer`` that hosts this application's tools, for example so
             it can be mounted in an ASGI app or run as a standalone server.
         """
+
         return self.mcp

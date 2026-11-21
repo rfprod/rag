@@ -34,6 +34,7 @@ class SkillRouter:
             skills: Skill names that questions can be routed to.
             model: The Ollama model tag used for routing. Defaults to ``qwen3:1.7b``.
         """
+
         self.skills = list(skills)
         self._lookup = {name.lower(): name for name in self.skills}
         self.llm = ChatOllama(
@@ -53,6 +54,7 @@ class SkillRouter:
             The matching skill name, or ``None`` if no skill fits or the reply
             is not a known skill.
         """
+
         if not self.skills:
             return None
 
