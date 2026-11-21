@@ -76,4 +76,5 @@ vector_store = QdrantVectorStore.from_documents(
     collection_name=configuration_module.QDRANT_COLLECTION_NAME,
     url=configuration_module.QDRANT_URL,
     api_key=configuration_module.QDRANT_API_KEY,
+    vector_name=configuration_module.VECTOR_NAME,
 )

@@ -228,6 +228,7 @@ def initialize() -> None:
         client=qdrant_client,
         collection_name=configuration_module.QDRANT_COLLECTION_NAME,
         embedding=embedding,
+        vector_name=configuration_module.VECTOR_NAME,
     )
     default_retriever = vector_store.as_retriever(k=configuration_module.RETRIEVER_K)
 
@@ -235,20 +236,29 @@ def initialize() -> None:
         collection_name=configuration_module.QDRANT_COLLECTION_NAME
     )
     vectors_config = info.config.params.vectors
-    if vectors_config is not None:
-        if isinstance(vectors_config, dict):
+    print(vectors_config)
+    if vectors_config is None:
+        raise RuntimeError(
+            f"Collection `{configuration_module.QDRANT_COLLECTION_NAME}` has no vector configurations."
+        )
+
+    if isinstance(vectors_config, dict):
+        if configuration_module.VECTOR_NAME in vectors_config:
+            vectors_config = vectors_config[configuration_module.VECTOR_NAME]
+        else:
             raise RuntimeError(
                 f"Collection `{configuration_module.QDRANT_COLLECTION_NAME}` uses named vectors, "
-                "but QdrantVectorStore expects a single unnamed vector."
+                f"but vector `{configuration_module.VECTOR_NAME}` is not found in the vectors configuration."
             )
-        stored_size = vectors_config.size
 
-        query_size = len(embedding.embed_query("dimension check"))
-        if stored_size != query_size:
-            raise RuntimeError(
-                f"Collection vector size {stored_size} does not match embedding model "
-                f"output {query_size}. Re-index or point QDRANT_COLLECTION_NAME at a matching collection."
-            )
+    stored_size = vectors_config.size
+
+    query_size = len(embedding.embed_query("dimension check"))
+    if stored_size != query_size:
+        raise RuntimeError(
+            f"Collection vector size {stored_size} does not match embedding model "
+            f"output {query_size}. Re-index or point `QDRANT_COLLECTION_NAME` at a matching collection."
+        )
 
     prompt = PromptTemplate(
         template="""You are an assistant for question-answering tasks.
